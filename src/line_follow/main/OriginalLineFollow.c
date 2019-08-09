@@ -15,7 +15,7 @@ your Wifi name and Password.
 #include <time.h>
 
 #include "SRA18.h"
-// #include "TUNING.h"  //Uncomment for tuning using WiFi
+ #include "TUNING.h"  //Uncomment for tuning using WiFi
 
 adc1_channel_t channel[4] = {ADC_CHANNEL_7, ADC_CHANNEL_6, ADC_CHANNEL_0, ADC_CHANNEL_3};
 int weights[4] = {-3,-1,1,3};
@@ -31,18 +31,24 @@ float sensor_count;
 
 /*
     * PID constants for correction for line following
+	1.* kp = 0.6 and kd=0.1 opt=67
+	2.kp = 0.55 kd = 0.3 opt=70
+	3. kp = 0.45 kd = 0.3 opt = 75
 */
-float kp= 0.0;
+float kp= 0.45;
 float ki= 0;
-float kd= 0.0;
+float kd= 0.45;
 
 //...................................
 /* Motor value constraints
 */
-float opt = 67;
+float opt = 75;
 float lower_pwm_constrain = 60;
-float higher_pwm_constrain = 80;
+float higher_pwm_constrain = 83;
 float left_pwm = 0, right_pwm = 0;
+
+//extra declararion
+float setpoint = 0,pitch_kP = 0,pitch_kD = 0,pitch_kI = 0,forward_buffer = 0,forward_offset = 0;
 
 
 /*
@@ -127,24 +133,24 @@ right_pwm = constrain((opt - correction), lower_pwm_constrain, higher_pwm_constr
  * Function to use ESP32 WiFi to create server to control PID constants
  * Has PID constants for self-balancing also
  */ 
-// void http_server(void *arg)
-// {
-//     printf("%s\n", "http task");
-//     struct netconn *conn, *newconn;
-//     err_t err;
-//     conn = netconn_new(NETCONN_TCP);
-//     netconn_bind(conn, NULL, 80);
-//     netconn_listen(conn);
-//     do {
-//      err = netconn_accept(conn, &newconn);
-//      if (err == ERR_OK) {
-//        http_server_netconn_serve(newconn,&setpoint,&pitch_kP,&pitch_kD,&pitch_kI,&kp,&kd,&ki, &forward_offset, &forward_buffer);
-//        netconn_delete(newconn);
-//      }
-//     } while(err == ERR_OK);
-//     netconn_close(conn);
-//     netconn_delete(conn);
-// }
+void http_server(void *arg)
+{
+    printf("%s\n", "http task");
+    struct netconn *conn, *newconn;
+    err_t err;
+    conn = netconn_new(NETCONN_TCP);
+    netconn_bind(conn, NULL, 80);
+    netconn_listen(conn);
+    do {
+     err = netconn_accept(conn, &newconn);
+     if (err == ERR_OK) {
+       http_server_netconn_serve(newconn,&setpoint,&pitch_kP,&pitch_kD,&pitch_kI,&kp,&kd,&ki, &forward_offset, &forward_buffer);
+       netconn_delete(newconn);
+     }
+    } while(err == ERR_OK);
+    netconn_close(conn);
+    netconn_delete(conn);
+}
 
 /*
  * Function for line following, passed in xTaskCreate() in app_main()
@@ -164,7 +170,7 @@ void line_follow(void *arg)
         // Calculate the correction using PID formula and implement PID control
         calc_correction();
         // Every iteration will send a signal to the motors to keep moving forward 
-        bot_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, left_pwm, right_pwm);
+        bot_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, left_pwm - 2.6, right_pwm);
         // Print values to monitor for testing
         printf("Error: %f\t",error );
         printf("correction: %f ",correction);
@@ -182,9 +188,9 @@ void app_main()
 	mcpwm_initialize();
 
     // Tuning using WiFi functions
-	// nvs_flash_init();
+	 //nvs_flash_init();
 	// initialise_wifi();
 
 	xTaskCreate(&line_follow,"line following",100000,NULL,1,NULL);
-	// xTaskCreate(&http_server,"server",10000,NULL,2,NULL);
+	//xTaskCreate(&http_server,"server",10000,NULL,2,NULL);
 }

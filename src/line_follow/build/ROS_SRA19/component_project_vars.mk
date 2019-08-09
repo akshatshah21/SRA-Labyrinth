@@ -1,0 +1,7 @@
+# Automatically generated build file. Do not edit.
+COMPONENT_INCLUDES += $(IDF_PATH)/components/ROS_SRA19/include
+COMPONENT_LDFLAGS += -L$(BUILD_DIR_BASE)/ROS_SRA19 -lROS_SRA19
+COMPONENT_LINKER_DEPS += 
+COMPONENT_SUBMODULES += 
+COMPONENT_LIBRARIES += ROS_SRA19
+component-ROS_SRA19-build: 
