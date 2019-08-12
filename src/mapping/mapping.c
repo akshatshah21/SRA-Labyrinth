@@ -7,13 +7,16 @@
 #define AHEAD 2
 #define MAX_VERTICES 100
 /*Variables for mapping */
-int point[MAX_VERTICES]; // Array for storing every point, referred by the number in this array
+int adj[MAX_VERTICES][4];	//Adjacency list
+int point[MAX_VERTICES]; // Array for storing every unique point, referred by the number in this array
+int encountered_pt[MAX_VERTICES*5]; //Array for storing every Encountered point in order of occurence
 int type[MAX_VERTICES];  // Array for storing the type of corresponding point in point array
 int explored[MAX_VERTICES] = {0};  // Array for storing how many times the bot has explored corresponding point
                   				   // in the point array
-int current_point = 0;
+int current_point = 0;	// pointer to encountered_pt array
+int prev_point = -1;
 int coordinates[MAX_VERTICES][2];    //Storing coordinates of corresponding points in point array
-int point_count = 0;   // Number of distinct points encountered
+int point_count = 0;   // Number of distinct points encountered | pointer to point array
 // int direction;  // Var to store current direction of movement of bot, maybe enum could be used
 int end_x = 50000,end_y = 50000; //initial end coordinates
 
@@ -228,45 +231,104 @@ void explored_f() {
 			new = false;
 			break;
 		}
+
 	}
+	current_point++;
 
 	if(new){
-		current_point = point_count;
 		point_count++;
-		point[current_point] = current_point;
-		coordinates[current_point][0] = current_x;
-		coordinates[current_point][1] = current_y;
-		explored[current_point] ++;
-		// type[current_point] = junction();
+		point[point_count-1] = point_count-1;
+		coordinates[point_count-1][0] = current_x;
+		coordinates[point_count-1][1] = current_y;
+		explored[point_count-1] ++;
+		type[point_count-1] = junction();
+		encountered_pt[current_point] = point[point_count-1];
+		//prev_point = current_point;
 	}
 
 	else{
 		explored[i]++;
-		//traverse adjacency list backward and look for point with explored value <= type value
+		encountered_pt[current_point] = point[i];
+		//prev_point = current_point;
+		//traverse encountered_point backward and look for point with explored value <= type value
 		//for '<' from adjacency list get neibouring points and take different path
+
+
 	}
+	if (prev_point != -1)
+	{
+		bool flag = 0;
+		for (int j = 0; j < 4; j++)
+		{
+			if (adj[prev_point][j] == encountered_pt[current_point])
+			{
+				flag = 1;
+				break;
+			}
+		}
+		if (!flag)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				if (adj[prev_point][j] == -1)
+				{
+					adj[prev_point][j] = encountered_pt[current_point];
+					break;
+				}
+			}
+		}
+	}
+	bool flag = 0;
+	for(int j=0;j<4,j++) {
+		if(adj[encountered_pt[current_point]][j]==prev_point){
+			flag = 1;
+			break;
+		}
+	}
+	if(!flag){
+		for(int k=0;k<4;k++){
+			if(adj[current_point][k]==-1){
+				adj[encountered_pt[current_point]][k]=prev_point;
+				break;
+			}
+		}
+	}
+	prev_point = current_point;
 }
 
 
 void map(void *arg) {
-    point_count++;	//Start point
+
+	while(junction() == -1) {
+		printf("No junction\n");
+	}
+	// bot stop
+
+	//Junction detected
+	explored_f();
+	decide_dir();
+	switch_dir();
+	// type[point_count] = junction();
+
+
+
+}
+
+void app_main(){
+	point_count++;	//Start point
 	point[point_count - 1] = 0;	// Adding start to point list
 	explored[point_count-1] = 1;
 	type[point_count-1] = 0;
 	current_dir = north;	//Start direction
 	coordinates[point_count-1][0] = 0;
 	coordinates[point_count-1][1] = 0;
-
-	while(junction() == -1) {
-		printf("No junction\n");
-
+	encountered_pt[current_point] = 0;
+	prev_point = current_point;
+	for(int j=0;j<MAX_VERTICES;j++){
+		for(int k=0;k<4;k++){
+			adj[j][k] = -1;
+		}
 	}
 
-	//Junction detected
-	calculate_coord();
-	explored_f();
-	// type[point_count] = junction();
-
-
-
+	xTaskCreate(&map "map",/*    */);
 }
