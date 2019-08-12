@@ -31,8 +31,36 @@ int digital_ls[3] = {0};
 
 void switch_dir() {
 	switch(future_dir - current_dir) {
+		case 0:
+			//go straight
+			current_dir = future_dir;
+			break;
+		case 2:
+			//turn 180degrees
+			current_dir = future_dir;
+			break;
+		case -2:
+			//turn 180degrees
+			current_dir = future_dir;
+			break;
 		case 1:
-			
+			//turn left
+			current_dir = future_dir;
+			break;
+		case -3:
+			//turn left
+			current_dir = future_dir;
+			break;
+		case -1:
+			//turn right
+			current_dir = future_dir;
+			break;
+		case 3:
+			//turn right
+			current_dir = future_dir;
+			break;
+		default:
+			printf("error in switch_dir()\n");
 	}
 }
 
@@ -116,9 +144,21 @@ void decide_dir(){
 
 
 int junction() {
-	if(digital_ls[])
-
-
+	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && (digital_ls[AHEAD] == 0))){
+		return 1;
+	}
+	else if(((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 1) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 0)){
+		return 2;
+	}
+	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0)){
+		return 0;
+	}
+	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
+		//5cm to and fro
+	}
+	else{
+		return -1;
+	}	
 	/*
 	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0)){
 		type[current_point] = 1;
@@ -177,7 +217,7 @@ void explored_f() {
 			current_y = coordinates[prev_point][1] - //dist_y;
 			break;
 		default:
-			printf"Error\n");
+			printf("Error in explored_f()\n");
 			break;
 	}
 	int i;
@@ -198,9 +238,6 @@ void explored_f() {
 		coordinates[current_point][1] = current_y;
 		explored[current_point] ++;
 		// type[current_point] = junction();
-		
-
-
 	}
 
 	else{
@@ -208,12 +245,7 @@ void explored_f() {
 		//traverse adjacency list backward and look for point with explored value <= type value
 		//for '<' from adjacency list get neibouring points and take different path
 	}
-
-
-
-
 }
-
 
 
 void map(void *arg) {
@@ -221,7 +253,7 @@ void map(void *arg) {
 	point[point_count - 1] = 0;	// Adding start to point list
 	explored[point_count-1] = 1;
 	type[point_count-1] = 0;
-	dir = north;	//Start direction
+	current_dir = north;	//Start direction
 	coordinates[point_count-1][0] = 0;
 	coordinates[point_count-1][1] = 0;
 
@@ -233,8 +265,6 @@ void map(void *arg) {
 	//Junction detected
 	calculate_coord();
 	explored_f();
-	coordinates[]
-
 	// type[point_count] = junction();
 
 
