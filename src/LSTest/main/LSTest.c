@@ -10,7 +10,7 @@
 #include "SRA18.h"
 #include "TUNING.h"
 
-#define LS 17
+#define LS 32
 
 void blink_task(void *arg)
 {
