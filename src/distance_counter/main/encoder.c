@@ -67,6 +67,34 @@ void countToDistance(counter_left,counter_right)
 
 }
 
+void http_netconn_serve(struct netconn *conn) {
+    const static char http_html_hdr[] = "HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\n";
+    const static char http_index_hml[] = "<html><head><title>Encoder distance</title></head><body></body></html>";
+    char dist[5];   // char array for stoiring distance
+    gcvt(*distance, 3, dist);
+    netconn_write(conn, http_html_hdr, sizeof(http_html_hdr)-1, NETCONN_NOCOPY);
+    netconn_write(conn, http_index_hml, sizeof(http_index_hml)-1, NETCONN_NOCOPY);
+    netconn_write(conn, dist, sizeof(dist)-1, NETCONN_NOCOPY);
+    netconn_close(conn);
+}
+
+void http_server(void *arg)
+{
+    struct netconn *conn, *newconn;
+    err_t err;
+    conn = netconn_new(NETCONN_TCP);
+    netconn_bind(conn, NULL, 80);
+    netconn_listen(conn);
+    do {
+        err = netconn_accept(conn, &newconn);   
+        if(err == ERR_OK) {
+            http_netconn_serve(newconn, &distance); //Serve distance
+            netconn_delete(newconn);
+        }
+    } while(err == ERR_OK);
+    netconn_close(conn);
+    netconn_delete(conn);
+}
 
 void app_main()
 {
@@ -74,6 +102,15 @@ void app_main()
 		Basic Function for task creation
 	*/
 
-		
+
+	initialize_wifi();
+    
+    const esp_mqtt_client_config_t client = {
+        .uri = "postman.cloudmqtt.com",
+        .username = "ocbshoyv".
+        .password= "u7RF9Xts1g1r",
+        .port = 16557
+    };
+
     xTaskCreate(&distance_count,"distance_count",4096,NULL,1,NULL);
 }
