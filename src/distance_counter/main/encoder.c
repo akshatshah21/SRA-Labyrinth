@@ -21,7 +21,7 @@ int counter_right = 0;
 void countToDistance()
 {
     double count_average,distance_final;
-    count_average = (counter_left + counter_right)/2;
+    count_average = ((double)counter_left + counter_right)/2;
     printf("Average value of counter %g",count_average);
     distance_final = (count_average * 20.3)/20;
     printf("Final distance is: %g",distance_final);
@@ -57,14 +57,14 @@ void http_server()
     netconn_delete(conn);
 }
 
-void distance_count(void *arg)
+void distance_count_left(void *arg)
 {
 	/*
 		Set the The LED Pins : GPIO 0 and GPIO 5 to OUTPUT
 	*/
      
     gpio_set_direction(left,GPIO_MODE_INPUT);
-    gpio_set_direction(right,GPIO_MODE_INPUT);
+    //gpio_set_direction(right,GPIO_MODE_INPUT);
 	//gpio_set_direction(LED_1,GPIO_MODE_OUTPUT);
 	//gpio_set_direction(LED_2,GPIO_MODE_OUTPUT);	
 
@@ -79,10 +79,31 @@ void distance_count(void *arg)
 		        //gpio_set_level(LED_1,0);	//Set LED1 ON
 		        //gpio_set_level(LED_2,0);	//Set LED2 ON
                 printf("count for left is:");
-                printf(counter_left);
+                printf("%d\n", counter_left);
                 //vTaskDelay(100/portTICK_PERIOD_MS);
+				break;
             }
         }
+        
+
+		// http_server();
+	}
+	
+}
+
+void distance_count_right(void *arg)
+{
+	/*
+		Set the The LED Pins : GPIO 0 and GPIO 5 to OUTPUT
+	*/
+     
+    //gpio_set_direction(left,GPIO_MODE_INPUT);
+    gpio_set_direction(right,GPIO_MODE_INPUT);
+	//gpio_set_direction(LED_1,GPIO_MODE_OUTPUT);
+	//gpio_set_direction(LED_2,GPIO_MODE_OUTPUT);	
+
+	while(1)
+	{
         while(gpio_get_level(right) == 0)
         {   
 
@@ -92,16 +113,16 @@ void distance_count(void *arg)
 		        //gpio_set_level(LED_1,0);	//Set LED1 ON
 		        //gpio_set_level(LED_2,0);	//Set LED2 ON
                 printf("count for right is:");
-                printf(counter_right);
+                printf("%d\n", counter_right);
                 //vTaskDelay(100/portTICK_PERIOD_MS);
+				break;
             }
         }
 
-		http_server();
+		// http_server();
 	}
 	
 }
-
 void app_main()
 {
 	/*
@@ -118,5 +139,6 @@ void app_main()
     //     .port = 16557
     // };
 
-    xTaskCreate(&distance_count,"distance_count",4096,NULL,1,NULL);
+    xTaskCreatePinnedToCore(&distance_count_left,"distance_count_left",4096,NULL,1,NULL,0);
+	xTaskCreatePinnedToCore(&distance_count_right,"distance_count_right",4096,NULL,1,NULL,1);
 }
