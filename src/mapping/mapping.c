@@ -1,7 +1,11 @@
 #include <stdio.h>
+#include <math.h>
 /*
     * Add all header files
-    *  */
+    *  
+*/
+
+
 #define LEFT 0
 #define RIGHT 1
 #define AHEAD 2
@@ -20,18 +24,43 @@ int point_count = 0;   // Number of distinct points encountered | pointer to poi
 // int direction;  // Var to store current direction of movement of bot, maybe enum could be used
 int end_x = 50000,end_y = 50000; //initial end coordinates
 
+/*
 enum direction {
     east, north, west, south
 };
+*/
 
-enum direction current_dir = north;
-enum direction future_dir = east;
+
+
+// enum direction current_dir = north;
+// enum direction future_dir = east;
+
+
+struct Direction
+{
+    int dir;
+    struct Direction* next;
+    struct Direction* prev; 
+};
+
+
+/*
+ *  dir:
+ *  0 - NORTH
+ *  1 - EAST
+ *  2 - SOUTH
+ *  3 - WEST 
+ */
+
+
+struct Direction directions[4];
+struct Direction* direction;
 
 
 /*Variables for line following and junction */
 int digital_ls[3] = {0};
 
-
+/*
 void switch_dir() {
 	switch(future_dir - current_dir) {
 		case 0:
@@ -66,7 +95,9 @@ void switch_dir() {
 			printf("error in switch_dir()\n");
 	}
 }
+*/
 
+/*
 void decide_dir(){
 	switch(current_dir){
 		case east:
@@ -144,6 +175,7 @@ void decide_dir(){
 				
 	}
 }
+*/
 
 
 int junction() {
@@ -153,7 +185,7 @@ int junction() {
 	else if(((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 1) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 0)){
 		return 2;
 	}
-	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0)){
+	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0){
 		return 0;
 	}
 	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
@@ -201,41 +233,41 @@ int junction() {
 
 void explored_f() {
 	int current_x, current_y;
-	switch(current_dir)
+	switch((*direction).dir)
 	{		
-		case east:
-			current_x = coordinates[prev_point][0] + //dist_x;
+		case 1:
+			current_x = coordinates[prev_point][0] + round(countToDistance());
 			current_y = coordinates[prev_point][1];
 			break;
-		case west:
-			current_x = coordinates[prev_point][0] - //dist_x;
+		case 3:
+			current_x = coordinates[prev_point][0] - round(countToDistance());
 			current_y = coordinates[prev_point][1];
 			break;
-		case north:
+		case 0:
 			current_x = coordinates[prev_point][0];
-			current_y = coordinates[prev_point][1] + //dist_y;
+			current_y = coordinates[prev_point][1] + round(countToDistance());
 			break;
-		case south:
+		case 2:
 			current_x = coordinates[prev_point][0];
-			current_y = coordinates[prev_point][1] - //dist_y;
+			current_y = coordinates[prev_point][1] - round(countToDistance());
 			break;
 		default:
 			printf("Error in explored_f()\n");
 			break;
 	}
 	int i;
-	bool new = true;
+	int new_f = 1;
 	for(i=0;i<point_count;i++) {
 		if((current_x == coordinates[i][0] && current_y == coordinates[i][1]) || (current_x == end_x && current_y == end_y)) {
 			// Not a new point
-			new = false;
+			new_f = 0;
 			break;
 		}
 
 	}
 	current_point++;
 
-	if(new){
+	if(new_f == 1){
 		point_count++;
 		point[point_count-1] = point_count-1;
 		coordinates[point_count-1][0] = current_x;
@@ -257,7 +289,7 @@ void explored_f() {
 	}
 	if (prev_point != -1)
 	{
-		bool flag = 0;
+		int flag = 0;
 		for (int j = 0; j < 4; j++)
 		{
 			if (adj[prev_point][j] == encountered_pt[current_point])
@@ -266,7 +298,7 @@ void explored_f() {
 				break;
 			}
 		}
-		if (!flag)
+		if (flag == 0)
 		{
 			for (int j = 0; j < 4; j++)
 			{
@@ -278,14 +310,15 @@ void explored_f() {
 			}
 		}
 	}
-	bool flag = 0;
-	for(int j=0;j<4,j++) {
+	
+	int flag = 0;
+	for(int j=0; j<4; j++) {
 		if(adj[encountered_pt[current_point]][j]==prev_point){
 			flag = 1;
 			break;
 		}
 	}
-	if(!flag){
+	if(flag == 0){
 		for(int k=0;k<4;k++){
 			if(adj[current_point][k]==-1){
 				adj[encountered_pt[current_point]][k]=prev_point;
@@ -303,23 +336,30 @@ void map(void *arg) {
 		printf("No junction\n");
 	}
 	// bot stop
+	bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
 
 	//Junction detected
 	explored_f();
-	decide_dir();
-	switch_dir();
+	// decide_dir();
+	// switch_dir();
 	// type[point_count] = junction();
 
 
 
 }
 
-void app_main(){
+
+void app_main()
+{
 	point_count++;	//Start point
 	point[point_count - 1] = 0;	// Adding start to point list
 	explored[point_count-1] = 1;
 	type[point_count-1] = 0;
-	current_dir = north;	//Start direction
+	// current_dir = north;	//Start direction
+
+	direction = &directions[0];
+
+
 	coordinates[point_count-1][0] = 0;
 	coordinates[point_count-1][1] = 0;
 	encountered_pt[current_point] = 0;
@@ -330,5 +370,30 @@ void app_main(){
 		}
 	}
 
-	xTaskCreate(&map "map",/*    */);
+	// Initialize dir member of direction array
+    for(int i=0;i<4;i++)
+    {
+        directions[i].dir = i;
+    }
+
+    // Creating the links
+    for(int i=0;i<4;i++)
+    {
+        if(i!=3)    directions[i].next = &directions[i+1];
+        else    directions[i].next = &directions[0];
+        if(i != 0)  directions[i].prev = &directions[i-1];
+        else    directions[i].prev = &directions[3];
+    }
+
+
+
+    // if(dry run) {
+	// xTaskCreatePinnnedToCore(&map, "map", 4096, NULL, NULL, 1, NULL, 0);	// CHECK PARAMS
+	// xTaskCreatePinnnedToCore(&line_follow, "line_follow", 4096, NULL, NULL, 1, NULL, 1);
+	// }
+
+	// else if(final run) {
+	// xTaskCreatePinnedToCore(&dijkstra_task, "dijkstra_task", 4096, NULL, NULL, 1, NULL, 0);
+	// xTaskCreatePinnedToCore(&line_follow, "line_follow", 4096, NULL, NULL, 1, NULL, 1);
+	// }
 }
