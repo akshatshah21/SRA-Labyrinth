@@ -1,11 +1,3 @@
-/*
-Copyright (c) 2018, Society of Robotics and Automation, VJTI
-This is an example code for line following :
-Go to : ..../components/SRA/include/TUNING.h and change EXAMPLE_WIFI_SSID and
-EXAMPLE_WIFI_PASS with
-your Wifi name and Password.
-*/
-
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -15,7 +7,11 @@ your Wifi name and Password.
 #include <time.h>
 
 #include "SRA18.h"
- #include "TUNING.h"  //Uncomment for tuning using WiFi
+#include "TUNING.h"  //Uncomment for tuning using WiFi
+
+#define CLOCKWISE 0
+#define ANTICLOCKWISE 1
+
 
 adc1_channel_t channel[4] = {ADC_CHANNEL_7, ADC_CHANNEL_6, ADC_CHANNEL_0, ADC_CHANNEL_3};
 int weights[4] = {-3,-1,1,3};
@@ -23,29 +19,27 @@ int weights[4] = {-3,-1,1,3};
 /*
 * Line Following PID Variables
 */
+
 float error=0, prev_error, difference, cumulative_error, correction;
 int adc_reading[4];
 float sensor_value[4];
 float sensor_count;
-
-
 /*
     * PID constants for correction for line following
 	1.* kp = 0.6 and kd=0.1 opt=67
 	2.kp = 0.55 kd = 0.3 opt=70
 	3. kp = 0.45 kd = 0.3 opt = 75
-	right_pwm  = 83
 */
-float kp= 0.55;
+float kp= 0.45;
 float ki= 0;
-float kd= 0.3;
+float kd= 0.45;
 
 //...................................
 /* Motor value constraints
 */
-float opt = 67;
-float lower_pwm_constrain = 70;
-float higher_pwm_constrain = 87;
+float opt = 75;
+float lower_pwm_constrain = 60;
+float higher_pwm_constrain = 83;
 float left_pwm = 0, right_pwm = 0;
 
 //extra declararion
@@ -125,10 +119,9 @@ correction = kp*error + ki*cumulative_error + kd*difference; //PID formula //ADD
 prev_error = error;                 //For calculation of derivative term
 
 //Work out manually, with the convention, to understand why + in left_pwm and - in right_pwm. 
-left_pwm = constrain((opt + correction), lower_pwm_constrain, higher_pwm_constrain) ;
-right_pwm = constrain((opt - correction), lower_pwm_constrain, higher_pwm_constrain)  ;
-printf("right pwm: %g",right_pwm);
-printf("left pwm: %g",left_pwm);
+left_pwm = constrain((opt + correction), lower_pwm_constrain, higher_pwm_constrain);
+right_pwm = constrain((opt - correction), lower_pwm_constrain, higher_pwm_constrain);
+
 }
 
 /*
@@ -157,10 +150,29 @@ void http_server(void *arg)
 /*
  * Function for line following, passed in xTaskCreate() in app_main()
  */ 
+
+
+
+void turn(int direction) {
+	if(direction == CLOCKWISE) {
+		while(sensor_value[0] < 700) {
+			bot_spot_right(MCPWM_UNIT_0, MCPWM_TIMER_0,75, 75);
+		}		
+	}
+	else if (direction == ANTICLOCKWISE) {
+		while(sensor_value[3] < 700) {
+			bot_spot_left(MCPWN_UNIT_)), MCPWM_TIMER_0, 75, 75);
+		}
+	}
+
+}
+
+
+
 void line_follow(void *arg)
 {
 
-     vTaskDelay(100/ portTICK_RATE_MS);
+    vTaskDelay(100/ portTICK_RATE_MS);
     while(1)
     {
         // get the raw readings
@@ -172,7 +184,7 @@ void line_follow(void *arg)
         // Calculate the correction using PID formula and implement PID control
         calc_correction();
         // Every iteration will send a signal to the motors to keep moving forward 
-        bot_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, left_pwm, right_pwm);
+        bot_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, left_pwm - 2.6, right_pwm);
         // Print values to monitor for testing
         printf("Error: %f\t",error );
         printf("correction: %f ",correction);
@@ -182,7 +194,7 @@ void line_follow(void *arg)
 }
 void app_main()
 {
-     vTaskDelay(1000/portTICK_PERIOD_MS);    // Don't start immediately on bootup, because it's inconvenient -_-
+    vTaskDelay(1000/portTICK_PERIOD_MS);    // Don't start immediately on bootup, because it's inconvenient -_-
     
 	prev_error = 0; // Added as a precautionary measure
 
