@@ -22,7 +22,11 @@ int prev_point = -1;
 int coordinates[MAX_VERTICES][2];    //Storing coordinates of corresponding points in point array
 int point_count = 0;   // Number of distinct points encountered | pointer to point array
 // int direction;  // Var to store current direction of movement of bot, maybe enum could be used
+int start_flag = 0;
+int start_count = 1;
 int end_x = 50000,end_y = 50000; //initial end coordinates
+int end_flag = 0;
+int end_count = 0;
 
 /*
 enum direction {
@@ -178,6 +182,45 @@ void decide_dir(){
 */
 
 
+void follow_right(){
+	if(digital_ls[RIGHT]==1){
+		//turn right
+		direction = (*direction).next;
+		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		vTaskDelay(500/portTICK_PERIOD_MS);
+		bot_spot_left(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);//left means right, since connections are opposite
+		vTaskDelay(30);	// Change delay values
+	}
+	else if(digital_ls[AHEAD]==1){
+		//go straight
+		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		vTaskDelay(500/portTICK_PERIOD_MS);	
+		bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
+		vTaskDelay(50);
+
+	}
+	else if(digital_ls[LEFT]==1){
+		//turn left
+		direction = (*direction).prev;
+		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		vTaskDelay(500/portTICK_PERIOD_MS);
+		bot_spot_right(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);// right means left, since connections are opposite
+		vTaskDelay(30);	// Change delay values
+	}
+	else{
+		//spot turn
+		while(digital_ls[RIGHT] == 1) {
+			direction = (*direction).prev;
+			direction = (*direction).prev;
+			bot_spot_left(MCPWM_UNIT_0, MCPWM_TIMER_0, 70, 70);
+			vTaskDelay(30);
+		}
+
+	}
+
+}
+
+
 int junction() {
 	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && (digital_ls[AHEAD] == 0))){
 		return 1;
@@ -190,45 +233,26 @@ int junction() {
 	}
 	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
 		//5cm to and fro
+		while(round(countToDistance())!= 5){
+			bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,65,65);
+			if(digital_ls[LEFT]<3500 && digital_ls[RIGHT]<3500){
+				break;
+			}
+			end_flag = 1;
+		}
+		while(round(countToDistance())!= 5){
+			bot_backward(MCPWM_UNIT_0,MCPWM_TIMER_0,65,65);
+		}
+		if(end_flag==1){
+			end_count++;
+			return 0;
+		}
+		else 
+			return 3;
 	}
 	else{
 		return -1;
 	}	
-	/*
-	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0)){
-		type[current_point] = 1;
-	}
-
-	else if((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0) {
-		type[current_point] = 2;
-	}
-
-	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1) {
-		type[current_point] = 3;
-	}
-
-	else if((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 1) {
-		type[current_point] = 4;
-	}
-	else if((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1) {
-		bool end = true;
-		while(/* travelled 5cm to and fro /){
-			if((digital_ls[LEFT] == 0) || (digital_ls[RIGHT] == 0) || digital_ls[AHEAD] == 0){
-				end = false;
-				break;
-			}
-		}
-		if()
-	}
-	else if((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 0) {
-		type[current_point] = 6;
-	}
-	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0) {
-		type[current_point] = 7;
-	}
-	*/
-
-
 }
 
 void explored_f() {
@@ -258,9 +282,13 @@ void explored_f() {
 	int i;
 	int new_f = 1;
 	for(i=0;i<point_count;i++) {
-		if((current_x == coordinates[i][0] && current_y == coordinates[i][1]) || (current_x == end_x && current_y == end_y)) {
+		if((current_x == coordinates[i][0] && current_y == coordinates[i][1]) ) {
 			// Not a new point
 			new_f = 0;
+			if(current_x==0 && current_y==0){
+				start_flag = 1;
+				start_count++;
+			}
 			break;
 		}
 
@@ -274,6 +302,11 @@ void explored_f() {
 		coordinates[point_count-1][1] = current_y;
 		explored[point_count-1] ++;
 		type[point_count-1] = junction();
+		if(end_flag==1){
+			end_x = current_x;
+			end_y = current_y;
+			end_flag = 0;
+		}
 		encountered_pt[current_point] = point[point_count-1];
 		//prev_point = current_point;
 	}
@@ -327,6 +360,9 @@ void explored_f() {
 		}
 	}
 	prev_point = current_point;
+	if(end_count<=1){
+		follow_right();
+	}
 }
 
 
