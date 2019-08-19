@@ -1,4 +1,4 @@
-//C Headers
+ //C Headers
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
@@ -12,9 +12,13 @@
 //esp pins
 #define left 17
 #define right 18
-#define LS_LEFT 16
-#define LS_RIGHT 19
-#define LS_AHEAD 32
+
+#define LED_0 0
+#define LED_1 5
+adc1_channel_t ls_ahead_channel = ADC_CHANNEL_4;	// 32
+adc1_channel_t ls_left_channel = ADC_CHANNEL_5;		// 33
+adc2_channel_t ls_right_channel = ADC2_CHANNEL_4;	// 13
+adc2_config_channel_atten(ADC2_CHANNEL_4,ADC_ATTEN_DB_11);
 
 // int counter_left = 0;
 // int counter_right = 0;
@@ -160,26 +164,61 @@ right_pwm = constrain((optright - correction), lower_pwm_constrain, higher_pwm_c
  * Function for line following, passed in xTaskCreate() in app_main()
  */ 
 void junction()
-{	
-	gpio_set_direction(LS_LEFT,GPIO_MODE_INPUT);
-	gpio_set_direction(LS_RIGHT,GPIO_MODE_INPUT);
-	gpio_set_direction(LS_AHEAD,GPIO_MODE_INPUT);
-	if(gpio_get_level(LS_RIGHT) == 1)
+{	int left_tom = adc1_get_raw(ls_left_channel);
+	int ahead_tom = adc1_get_raw(ls_ahead_channel);
+	int right_tom = 0;
+	int *abc;
+	abc = &right_tom;
+	adc2_get_raw(ls_right_channel,3,*abc);
+	// gpio_set_direction(LS_LEFT,GPIO_MODE_INPUT);
+	// gpio_set_direction(LS_RIGHT,GPIO_MODE_INPUT);
+	// gpio_set_direction(LS_AHEAD,GPIO_MODE_INPUT);
+	printf("L: %d\n",left_tom);
+	printf("A: %d\n",ahead_tom);
+	printf("R: %d\n",right_tom);
+	if(left_tom >= 3500 && ahead_tom >=3500 && right_tom >= 3500)
 	{
-		bot_spot_right(MCPWM_UNIT_0,MCPWM_TIMER_0,80,60);
-		vTaskDelay(500);
+		printf("Condition 0\n");
+		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		vTaskDelay(500/portTICK_PERIOD_MS);
+		bot_spot_left(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);//left means right
+		vTaskDelay(30);
+	}
+	else if(left_tom >= 3500 && ahead_tom >=3500)
+	{
+		printf("Condition 1\n");
+		gpio_set_level(LED_0, 0);
+		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		vTaskDelay(500/portTICK_PERIOD_MS);	
+		bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
+		vTaskDelay(50);
 
 
 	}
 	// else if(gpio_get_level(LS_AHEAD) == 1)
 	// {
-	// 	bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
+	// 	bot_spot_right(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
+	
 	// }
-	else if(gpio_get_level(LS_LEFT) == 1)
+	else if(left_tom >= 3500)
 	{
-		bot_spot_left(MCPWM_UNIT_0,MCPWM_TIMER_0,60,80);
-		vTaskDelay(500);
+		printf("Condition 2\n");
+		gpio_set_level(LED_1, 0);
+		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		vTaskDelay(500/portTICK_PERIOD_MS);
+		bot_spot_right(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);// spot_right matlab left turn
+		vTaskDelay(30);
 	}
+	else
+	{
+		printf("condition3 \n");
+	
+	
+		
+	}
+	gpio_set_level(LED_1, 1);
+	gpio_set_level(LED_0, 1);
+	
 
 }
 void line_follow(void *arg)
@@ -203,7 +242,7 @@ void line_follow(void *arg)
         calc_correction();
         // Every iteration will send a signal to the motors to keep moving forward 
         bot_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, left_pwm, right_pwm);
-		//junction();
+		junction();
         // Print values to monitor for testing
         // printf("Error: %f\t",error );
         // printf("correction: %f ",correction);
@@ -348,7 +387,10 @@ void app_main()
      // Tuning using WiFi functions
  	 //nvs_flash_init();
  	// initialise_wifi();
-
+	gpio_set_direction(LED_0, GPIO_MODE_OUTPUT);
+	gpio_set_direction(LED_1, GPIO_MODE_OUTPUT);
+	gpio_set_level(LED_0, 1);
+	gpio_set_level(LED_1, 1);
  	xTaskCreatePinnedToCore(&line_follow,"line following",4096,NULL,1,NULL,0);
 
 
