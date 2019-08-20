@@ -60,7 +60,7 @@ struct Direction
 struct Direction directions[4];
 struct Direction* direction;
 
-int direction_exp[MAX_VERTICES][4]; //  Parth ka Array
+int direction_exp[MAX_VERTICES][4] = ; //  Parth ka Array
 
 
 /*Variables for line following and junction */
@@ -199,7 +199,6 @@ void follow_right(){
 		vTaskDelay(500/portTICK_PERIOD_MS);	
 		bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
 		vTaskDelay(50);
-
 	}
 	else if(digital_ls[LEFT]==1){
 		//turn left
@@ -211,7 +210,7 @@ void follow_right(){
 	}
 	else{
 		//spot turn
-		while(digital_ls[RIGHT] == 1) {
+		while(digital_ls[RIGHT] != 1) {
 			direction = (*direction).prev;
 			direction = (*direction).prev;
 			bot_spot_left(MCPWM_UNIT_0, MCPWM_TIMER_0, 70, 70);//left means right
@@ -224,19 +223,44 @@ void follow_right(){
 
 
 int junction() {
-	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && (digital_ls[AHEAD] == 0))){
+	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0)){
+		// Right only
+		direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
 		return 1;
 	}
-	else if(((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 1) || ((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 0)){
+	else if((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && (digital_ls[AHEAD] == 0)) {
+		// Left only
+		direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
+		return 1;
+	}
+	else if(((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
+		// Right and ahead
+		direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
+		direction_explored[encountered_pt[current_point]][(*direction).dir] = 1;
+		return 2;
+	}
+	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 1)) {
+		// Left and ahead
+		direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
+		direction_explored[encountered_pt[current_point]][(*direction).dir] = 1;
+		return 2;
+	}
+	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 0)) {
+		// Left and Right
+		direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
+		direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
 		return 2;
 	}
 	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0){
+		// Dead end
+		direction_explored[encountered_pt[current_point]][(((*direction).next).next).dir] = 1;
 		return 0;
 	}
 	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
 		//5cm to and fro
 		while(round(countToDistance())!= 5){
 			bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,65,65);
+			end_flag = 0;
 			if(digital_ls[LEFT]<3500 && digital_ls[RIGHT]<3500){
 				break;
 			}
@@ -247,9 +271,14 @@ int junction() {
 		}
 		if(end_flag==1){
 			end_count++;
+			direction_explored[encountered_pt[current_point]][(((*direction).next).next).dir] = 1;
 			return 0;
 		}
 		else 
+			// + junction
+			direction_explored[encountered_pt[current_point]][(*direction).dir] = 1;
+			direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
+			direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
 			return 3;
 	}
 	else{
@@ -261,7 +290,8 @@ int junction() {
 void dont_follow_right(){
 	explored_f();
 	if(explored[encountered_pt[current_point]] - 1 < type[encountered_pt[current_point]]) {
-
+		//traverse parth ka array
+		//if 1 is found ,go in that direction by taking appropriate turn
 	}
 	else {
 		follow_right();
@@ -313,13 +343,14 @@ void explored_f() {
 		coordinates[point_count-1][0] = current_x;
 		coordinates[point_count-1][1] = current_y;
 		explored[point_count-1] ++;
+		encountered_pt[current_point] = point[point_count-1];
 		type[point_count-1] = junction();
 		if(end_flag==1 && end_count==0){
 			end_x = current_x;
 			end_y = current_y;
 			end_flag = 0;
 		}
-		encountered_pt[current_point] = point[point_count-1];
+		
 		//prev_point = current_point;
 	}
 
@@ -372,7 +403,7 @@ void explored_f() {
 		}
 	}
 	prev_point = current_point;
-	if(end_count<=1 && start_count<=2){
+	if(end_count<=1 && start_count<2){
 		follow_right();
 	}
 	
@@ -388,7 +419,7 @@ void map(void *arg) {
 	bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
 
 	//Junction detected
-	if(end_count<=1 && start_count<=2){
+	if(end_count<=1 && start_count<2){
 		explored_f();
 	}
 	else{
