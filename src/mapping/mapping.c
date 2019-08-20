@@ -60,6 +60,8 @@ struct Direction
 struct Direction directions[4];
 struct Direction* direction;
 
+int direction_exp[MAX_VERTICES][4]; //  Parth ka Array
+
 
 /*Variables for line following and junction */
 int digital_ls[3] = {0};
@@ -212,7 +214,7 @@ void follow_right(){
 		while(digital_ls[RIGHT] == 1) {
 			direction = (*direction).prev;
 			direction = (*direction).prev;
-			bot_spot_left(MCPWM_UNIT_0, MCPWM_TIMER_0, 70, 70);
+			bot_spot_left(MCPWM_UNIT_0, MCPWM_TIMER_0, 70, 70);//left means right
 			vTaskDelay(30);
 		}
 
@@ -255,6 +257,16 @@ int junction() {
 	}	
 }
 
+
+void dont_follow_right(){
+	explored_f();
+	if(explored[encountered_pt[current_point]] - 1 < type[encountered_pt[current_point]]) {
+
+	}
+	else {
+		follow_right();
+	}
+}
 void explored_f() {
 	int current_x, current_y;
 	switch((*direction).dir)
@@ -302,7 +314,7 @@ void explored_f() {
 		coordinates[point_count-1][1] = current_y;
 		explored[point_count-1] ++;
 		type[point_count-1] = junction();
-		if(end_flag==1){
+		if(end_flag==1 && end_count==0){
 			end_x = current_x;
 			end_y = current_y;
 			end_flag = 0;
@@ -315,7 +327,7 @@ void explored_f() {
 		explored[i]++;
 		encountered_pt[current_point] = point[i];
 		//prev_point = current_point;
-		//traverse encountered_point backward and look for point with explored value <= type value
+		//traverse encountered_pt backward and look for point with explored value <= type value
 		//for '<' from adjacency list get neibouring points and take different path
 
 
@@ -360,9 +372,10 @@ void explored_f() {
 		}
 	}
 	prev_point = current_point;
-	if(end_count<=1){
+	if(end_count<=1 && start_count<=2){
 		follow_right();
 	}
+	
 }
 
 
@@ -375,12 +388,15 @@ void map(void *arg) {
 	bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
 
 	//Junction detected
-	explored_f();
+	if(end_count<=1 && start_count<=2){
+		explored_f();
+	}
+	else{
+		dont_follow_right();
+	}
 	// decide_dir();
 	// switch_dir();
 	// type[point_count] = junction();
-
-
 
 }
 
