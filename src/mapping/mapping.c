@@ -9,6 +9,7 @@
 #define LEFT 0
 #define RIGHT 1
 #define AHEAD 2
+#define BACK 3
 #define MAX_VERTICES 100
 /*Variables for mapping */
 int adj[MAX_VERTICES][4];	//Adjacency list
@@ -60,7 +61,11 @@ struct Direction
 struct Direction directions[4];
 struct Direction* direction;
 
-int direction_exp[MAX_VERTICES][4] = ; //  Parth ka Array
+int direction_explored[MAX_VERTICES][4] = {0} ; //  Parth ka Array
+int NEXT_TURN = AHEAD;
+int JUNCTION = 0;
+
+
 
 
 /*Variables for line following and junction */
@@ -184,76 +189,92 @@ void decide_dir(){
 */
 
 
+
+
 void follow_right(){
 	if(digital_ls[RIGHT]==1){
 		//turn right
 		direction = (*direction).next;
-		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
-		vTaskDelay(500/portTICK_PERIOD_MS);
-		bot_spot_left(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);//left means right, since connections are opposite
-		vTaskDelay(30);	// Change delay values
+		NEXT_TURN = RIGHT;
+		direction_explored[encountered_pt[current_point]][(*direction).dir] = 2;
+		// bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		// vTaskDelay(500/portTICK_PERIOD_MS);
+		// bot_spot_left(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);//left means right, since connections are opposite
+		// vTaskDelay(30);	// Change delay values
 	}
 	else if(digital_ls[AHEAD]==1){
 		//go straight
-		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
-		vTaskDelay(500/portTICK_PERIOD_MS);	
-		bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
-		vTaskDelay(50);
+		NEXT_TURN = AHEAD;
+		direction_explored[encountered_pt[current_point]][(*direction).dir] = 2;
+		// bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		// vTaskDelay(500/portTICK_PERIOD_MS);	
+		// bot_forward(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);
+		// vTaskDelay(50);
 	}
 	else if(digital_ls[LEFT]==1){
 		//turn left
 		direction = (*direction).prev;
-		bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
-		vTaskDelay(500/portTICK_PERIOD_MS);
-		bot_spot_right(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);// right means left, since connections are opposite
-		vTaskDelay(30);	// Change delay values
+		NEXT_TURN = LEFT;
+		direction_explored[encountered_pt[current_point]][(*direction).dir] = 2;
+		// bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+		// vTaskDelay(500/portTICK_PERIOD_MS);
+		// bot_spot_right(MCPWM_UNIT_0,MCPWM_TIMER_0,70,70);// right means left, since connections are opposite
+		// vTaskDelay(30);	// Change delay values
 	}
 	else{
-		//spot turn
-		while(digital_ls[RIGHT] != 1) {
-			direction = (*direction).prev;
-			direction = (*direction).prev;
-			bot_spot_left(MCPWM_UNIT_0, MCPWM_TIMER_0, 70, 70);//left means right
-			vTaskDelay(30);
-		}
+		//180 turn  AT DEAD END
+		direction = (*direction).prev;
+		direction = (*direction).prev;
+		NEXT_TURN = BACK;
+		direction_explored[encountered_pt[current_point]][(*direction).dir] = 2;
+		// while(digital_ls[RIGHT] != 1) {
+		// 	bot_spot_left(MCPWM_UNIT_0, MCPWM_TIMER_0, 70, 70);//left means right
+		// 	vTaskDelay(30);
+		// }
 
 	}
 
 }
 
 
-int junction() {
+int junction_decide() {
 	if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && (digital_ls[AHEAD] == 0)){
 		// Right only
 		direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
+		direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 		return 1;
 	}
 	else if((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && (digital_ls[AHEAD] == 0)) {
 		// Left only
 		direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
+		direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 		return 1;
 	}
 	else if(((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
 		// Right and ahead
 		direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
 		direction_explored[encountered_pt[current_point]][(*direction).dir] = 1;
+		direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 		return 2;
 	}
 	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 1)) {
 		// Left and ahead
 		direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
 		direction_explored[encountered_pt[current_point]][(*direction).dir] = 1;
+		direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 		return 2;
 	}
 	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 0)) {
 		// Left and Right
 		direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
 		direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
+		direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 		return 2;
 	}
 	else if((digital_ls[LEFT] == 0) && (digital_ls[RIGHT] == 0) && digital_ls[AHEAD] == 0){
 		// Dead end
 		direction_explored[encountered_pt[current_point]][(((*direction).next).next).dir] = 1;
+		//direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 		return 0;
 	}
 	else if(((digital_ls[LEFT] == 1) && (digital_ls[RIGHT] == 1) && digital_ls[AHEAD] == 1)){
@@ -272,6 +293,7 @@ int junction() {
 		if(end_flag==1){
 			end_count++;
 			direction_explored[encountered_pt[current_point]][(((*direction).next).next).dir] = 1;
+			//direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 			return 0;
 		}
 		else 
@@ -279,6 +301,7 @@ int junction() {
 			direction_explored[encountered_pt[current_point]][(*direction).dir] = 1;
 			direction_explored[encountered_pt[current_point]][((*direction).prev).dir] = 1;
 			direction_explored[encountered_pt[current_point]][((*direction).next).dir] = 1;
+			direction_explored[encountered_pt[current_point]][((*direction).next.next).dir] = 2;
 			return 3;
 	}
 	else{
@@ -292,17 +315,64 @@ void dont_follow_right(){
 	if(explored[encountered_pt[current_point]] - 1 < type[encountered_pt[current_point]]) {
 		//traverse parth ka array
 		//if 1 is found ,go in that direction by taking appropriate turn
+		int parth_flag = 0;
+		for(int i=0;i<4;i++) {
+			if(direction_explored[encountered_pt[current_point]][i] == 1) {
+				
+				direction_explored[encountered_pt[current_point]][i] = 2;
+				parth_flag = 1;
+				// Take turn here
+				switch(i - (*direction).dir){
+					case 0:
+						//go straight
+						NEXT_TURN = AHEAD;
+						break;
+					case 2:
+						//turn 180degrees
+						NEXT_TURN = BACK;
+						break;
+					case -2:
+						//turn 180degrees
+						NEXT_TURN = BACK;
+						break;
+					case 1:
+						//turn left
+						NEXT_TURN = LEFT;
+						break;
+					case -3:
+						//turn left
+						NEXT_TURN = LEFT;
+						break;
+					case -1:
+						//turn right
+						NEXT_TURN = RIGHT;
+						break;
+					case 3:
+						//turn right
+						NEXT_TURN = RIGHT;
+						break;
+					default:
+						printf("error in switch_dir()\n");
+				}
+			}
+		}
+		//check this condition
+		if(parth_flag==0){
+			follow_right();
+		}
 	}
 	else {
 		follow_right();
 	}
 }
+
+
 void explored_f() {
 	int current_x, current_y;
 	switch((*direction).dir)
 	{		
 		case 1:
-			current_x = coordinates[prev_point][0] + round(countToDistance());
+			current_x = coordinates[prev_point][0] + round(countToDistance()); // Iska comm dekho
 			current_y = coordinates[prev_point][1];
 			break;
 		case 3:
@@ -344,8 +414,8 @@ void explored_f() {
 		coordinates[point_count-1][1] = current_y;
 		explored[point_count-1] ++;
 		encountered_pt[current_point] = point[point_count-1];
-		type[point_count-1] = junction();
-		if(end_flag==1 && end_count==0){
+		type[point_count-1] = junction_decide();
+		if(end_flag==1 && end_count==1) {
 			end_x = current_x;
 			end_y = current_y;
 			end_flag = 0;
@@ -402,7 +472,7 @@ void explored_f() {
 			}
 		}
 	}
-	prev_point = current_point;
+	prev_point = encountered_pt[current_point];
 	if(end_count<=1 && start_count<2){
 		follow_right();
 	}
@@ -412,11 +482,12 @@ void explored_f() {
 
 void map(void *arg) {
 
-	while(junction() == -1) {
+	while(JUNCTION == 0) {
 		printf("No junction\n");
 	}
 	// bot stop
-	bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+
+	// bot_stop(MCPWM_UNIT_0, MCPWM_TIMER_0); // Line follow mai stop karo
 
 	//Junction detected
 	if(end_count<=1 && start_count<2){
@@ -425,6 +496,7 @@ void map(void *arg) {
 	else{
 		dont_follow_right();
 	}
+	JUNCTION = 0;
 	// decide_dir();
 	// switch_dir();
 	// type[point_count] = junction();
@@ -440,12 +512,14 @@ void app_main()
 	type[point_count-1] = 0;
 	// current_dir = north;	//Start direction
 
+
 	direction = &directions[0];
 
 
 	coordinates[point_count-1][0] = 0;
 	coordinates[point_count-1][1] = 0;
 	encountered_pt[current_point] = 0;
+	direction_explored[0][0] = 2;
 	prev_point = current_point;
 	for(int j=0;j<MAX_VERTICES;j++){
 		for(int k=0;k<4;k++){
@@ -460,7 +534,7 @@ void app_main()
     }
 
     // Creating the links
-    for(int i=0;i<4;i++)
+    for(int i=0; i<4; i++)
     {
         if(i!=3)    directions[i].next = &directions[i+1];
         else    directions[i].next = &directions[0];
