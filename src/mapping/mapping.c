@@ -336,20 +336,20 @@ void dont_follow_right(){
 						NEXT_TURN = BACK;
 						break;
 					case 1:
-						//turn left
-						NEXT_TURN = LEFT;
+						//turn right
+						NEXT_TURN = RIGHT;
 						break;
 					case -3:
+						//turn right
+						NEXT_TURN = RIGHT;
+						break;
+					case -1:
 						//turn left
 						NEXT_TURN = LEFT;
 						break;
-					case -1:
-						//turn right
-						NEXT_TURN = RIGHT;
-						break;
 					case 3:
-						//turn right
-						NEXT_TURN = RIGHT;
+						//turn left
+						NEXT_TURN = LEFT;
 						break;
 					default:
 						printf("error in switch_dir()\n");
