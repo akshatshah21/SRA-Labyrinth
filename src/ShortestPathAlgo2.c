@@ -35,6 +35,7 @@ int findPath(int parent[], int end)
     {
         if(end == i)    break;
     }
+    printf("i = %d\n", i);
     while(i != -1)
     {
         path[length] = parent[i];
@@ -42,12 +43,39 @@ int findPath(int parent[], int end)
         length++;
     }
 
-    printf("\n Path:");
-    for(int i=0;i<length;i++)
+    printf("\nUlta Path:\n");
+    for(int j=0;j<length;j++)
     {
-        printf("%d  ",path[i]);
+        printf("%d\n",path[j]);
     }
-    printf("\n");
+    printf("End of ulta path\n");
+
+    printf("Length:%d\n", length);
+    int start_index, end_index, temp;
+    start_index = 0;
+    end_index = 3;
+    while(start_index < end_index) {
+        printf("Swap %d matlab %d with %d matlab %d\n", start_index, path[start_index], end_index, path[end_index]);
+        temp = path[start_index];
+        path[start_index] = path[end_index];
+        path[end_index] = temp;
+        start_index += 1;
+        end_index -= 1;
+    }
+
+    printf("end = %d\n", end);
+
+    path[length++] = end;
+    
+    printf("%d\n", path[-1]);
+
+    printf("\nPath:\n");
+
+    for(int j=0;j<length;j++)
+    {
+        printf("%d\n",path[j]);
+    }
+    printf("End\n");
 }
 
 void dijkstra(int graph[V][V], int src)

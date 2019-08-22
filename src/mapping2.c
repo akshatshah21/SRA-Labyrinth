@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include<stdbool.h>
 #include <math.h>
 /*
     * Add all header files
@@ -28,6 +29,7 @@ int start_count = 1;
 int end_x = 50000,end_y = 50000; //initial end coordinates
 int end_flag = 0;
 int end_count = 0;
+int final_path[20] = {0};
 
 /*
 enum direction {
@@ -71,124 +73,174 @@ int JUNCTION = 0;
 /*Variables for line following and junction */
 int digital_ls[3] = {0};
 
-/*
-void switch_dir() {
-	switch(future_dir - current_dir) {
-		case 0:
-			//go straight
-			current_dir = future_dir;
-			break;
-		case 2:
-			//turn 180degrees
-			current_dir = future_dir;
-			break;
-		case -2:
-			//turn 180degrees
-			current_dir = future_dir;
-			break;
-		case 1:
-			//turn left
-			current_dir = future_dir;
-			break;
-		case -3:
-			//turn left
-			current_dir = future_dir;
-			break;
-		case -1:
-			//turn right
-			current_dir = future_dir;
-			break;
-		case 3:
-			//turn right
-			current_dir = future_dir;
-			break;
-		default:
-			printf("error in switch_dir()\n");
-	}
+
+int shortest_path[point_count - 1];
+
+
+// IS V = point_count
+int minDistance(int dist, bool sptSet[])
+{
+    int min = INT_MAX, min_index;
+    for(int v=0;v < point_count; v++) // pakka point_count??
+    {
+        if(sptSet[v] == false && dist[v] <= min)
+        {
+            min = dist;
+            min_index = v;
+        }
+    }
+    return min_index;
 }
-*/
+
+
+bool adjCheck(int u, int v) {
+    for(int i=0; i<4; i++) {
+        if(adj[u][i] == v)  return true;
+    }
+    return false;
+}
+
+
+int calcDist(int u, int v) {
+    if(coordinates[u][0] != coordinates[v][0])  return abs(coordinates[u][0] - coordinates[v][0]);
+    if(coordinates[u][1] != coordinates[v][1])  return abs(coordinates[u][1] - coordinates[v][1]);
+}
+
 
 /*
-void decide_dir(){
-	switch(current_dir){
-		case east:
-			if(digital_ls[AHEAD]==1){
-				future_dir = east;
-				break;
-			}
-			else if(digital_ls[LEFT] == 1) {
-				future_dir = north;
-				break;
-			}
-			else if(digital_ls[RIGHT] == 1) {
-				future_dir = south;
-				break;
-			}
-			else {
-				future_dir = west;
-				break;
-			}
-
-		case north:
-			if(digital_ls[RIGHT]==1){
-				future_dir = east;
-				break;
-			}
-			else if(digital_ls[AHEAD] == 1) {
-				future_dir = north;
-				break;
-			}
-			else if(digital_ls[LEFT] == 1) {
-				future_dir = west;
-				break;
-			}
-			else {
-				future_dir = south;
-				break;
-			}
-
-		case west:
-			if(digital_ls[RIGHT]==1){
-				future_dir = north;
-				break;
-			}
-			else if(digital_ls[AHEAD] == 1) {
-				future_dir = west;
-				break;
-			}
-			else if(digital_ls[LEFT] == 1) {
-				future_dir = south;
-				break;
-			}
-			else {
-				future_dir = east;
-				break;
-			}
-
-		case south:
-			if(digital_ls[LEFT]==1){
-				future_dir = east;
-				break;
-			}
-			else if(digital_ls[RIGHT] == 1) {
-				future_dir = west;
-				break;
-			}
-			else if(digital_ls[AHEAD] == 1) {
-				future_dir = south;
-				break;
-			}
-			else {
-				future_dir = north;
-				break;
-			}	
-
-				
-	}
+void func(((((()))))) {
+    // do 
 }
 */
 
 
+int findPath(int parent[], int end) // end ka index
+{
+    int length = 0;
+    int i;
+    for(i=0;i<point_count;i++)
+    {
+        if(end == i)    break;
+    }
+    while(i != -1)
+    {
+        shortest_path[length] = parent[i];
+        i = parent[i];
+        length++;
+    }
+
+    // Reverse path here
+    int start_index, end_index, temp;
+    start_index = 0;
+    end_index = length-1;
+    while(start_index < end_index) {
+        temp = shortest_path[start_index];
+        shortest_path[start_index] = shortest_path[end_index];
+        shortest_path[end_index] = temp;
+        start_index += 1;
+        end_index -= 1;
+    }
+    shortest_path[length++] = end;
+    printf("\n Path:");
+    for(int i=0;i<length;i++)
+    {
+        printf("%d  ",shortest_path[i]);
+    }
+    printf("\n");
+}
+
+
+void dijkstra(int graph[point_count][4], int src)
+{
+    int dist[point_count]
+    int parent[point_count];
+    bool sptSet[point_count];
+    for(int i=0;i<point_count;i++)
+    {
+        sptSet[i] = false;
+        dist[i] = INT_MAX;
+    }
+    dist[src] = 0;
+    parent[src] = -1;
+    for(int i=0;i<point_count-1;i++)
+    {
+        int u = minDistance(dist, sptSet);
+        sptSet[u] = true;
+        for(int v=0;v<point_count;v++)
+        {
+            if(!sptSet[v] && adjCheck(u, v) && dist[u] != INT_MAX && dist[u] + calcDist(u, v) < dist[v])
+            {
+                dist[v] = dist[u] + calcDist(u, v);
+                parent[v] = u;
+            }
+        }
+
+        // printSolution(dist, V); // Uncomment this if you want to see step by step solution
+    }
+    printSolution(dist,parent,V);
+    findPath(parent, end);
+
+}
+
+
+void follow_shortest_path() {
+    int next_index = shortest_path[2]; // Index 0 is -1, Index 1 is 0
+    int now = shortest_path[1];
+    int counter_path = 2;
+    int i = 0;
+    (*direction).dir = 0;
+    while(now != end) {
+        // Go to next_index
+        // Change next_index and now
+        int x = coordinates[next_index][0] - coordinates[now][0];
+        int y = coordinates[next_index][1] - coordinates[now][1];
+        if(x>0 && y==0){
+            i = 1;
+        }
+        else if(x<0 && y==0){
+            i = 3;
+        }
+        else if(x==0 && y>0){
+            i = 0;
+        }
+        else if(x==0 && y<0){
+            i = 2;
+        }
+        switch(i - (*direction).dir){
+			case 0:
+				//go straight
+				//NEXT_TURN = AHEAD;
+                final_path[counter_path-2] = AHEAD;
+				break;
+			case 1:
+				//turn right
+				//NEXT_TURN = RIGHT;
+                final_path[counter_path-2] = RIGHT;
+				break;
+			case -3:
+				//turn right
+				//NEXT_TURN = RIGHT;
+                final_path[counter_path-2] = RIGHT;
+				break;
+			case -1:
+				//turn left
+				//NEXT_TURN = LEFT;
+                final_path[counter_path-2] = LEFT;
+				break;
+			case 3:
+				//turn left
+				//NEXT_TURN = LEFT;
+                final_path[counter_path-2] = LEFT;
+				break;
+			default:
+				printf("error in switch_dir()\n");            
+        }
+        (*direction).dir = i;
+        now = next_index;
+        next_index =  shortest_path[++counter_path];
+        
+    }    
+}
 
 
 void follow_right(){
